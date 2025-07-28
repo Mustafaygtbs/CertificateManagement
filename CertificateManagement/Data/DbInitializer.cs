@@ -99,7 +99,8 @@ namespace CertificateManagement.Data
         {
             using (var hmac = new HMACSHA512())
             {
-                var salt = hmac.Key; // 64 byte
+                // Default key length for HMACSHA512 is 128 bytes
+                var salt = hmac.Key;
                 var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
 
                 var hashBytes = new byte[salt.Length + hash.Length];

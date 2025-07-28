@@ -125,7 +125,8 @@ namespace CertificateManagement.Business.Services
         {
             using (var hmac = new HMACSHA512())
             {
-                var salt = hmac.Key; // HMACSHA512 key size: 64 bytes
+                // HMACSHA512 generates a 128 byte key by default
+                var salt = hmac.Key;
                 var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
 
                 // Salt ve hash'i birleştir
@@ -141,8 +142,8 @@ namespace CertificateManagement.Business.Services
         {
             var hashBytes = Convert.FromBase64String(storedHash);
 
-            // Salt 64 byte (HMACSHA512 key length)
-            var salt = new byte[64];
+            // HMACSHA512 key length is 128 bytes
+            var salt = new byte[128];
             Array.Copy(hashBytes, 0, salt, 0, salt.Length);
 
             using (var hmac = new HMACSHA512(salt))
