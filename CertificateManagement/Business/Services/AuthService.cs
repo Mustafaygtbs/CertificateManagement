@@ -23,18 +23,27 @@ namespace CertificateManagement.Business.Services
             _unitOfWork = unitOfWork;
             _configuration = configuration;
         }
-        
+
         public async Task<LoginResponseDto?> LoginAsync(LoginDto loginDto)
         {
             var user = (await _unitOfWork.Users.FindAsync(u => u.Email == loginDto.Email)).FirstOrDefault();
             if (user == null)
+            {
+                Console.WriteLine($"Kullanıcı bulunamadı: {loginDto.Email}");
                 return null;
-                
+            }
+
+            Console.WriteLine($"Kullanıcı bulundu: {user.Email}, PasswordHash: {user.PasswordHash.Substring(0, 20)}...");
+
             if (!VerifyPasswordHash(loginDto.Password, user.PasswordHash))
+            {
+                Console.WriteLine($"Şifre doğrulanamadı: {loginDto.Password}");
                 return null;
-                
+            }
+
             var token = GenerateJwtToken(user);
-            
+            Console.WriteLine($"Token oluşturuldu: {token.Substring(0, 20)}...");
+
             return new LoginResponseDto
             {
                 Token = token,
@@ -43,7 +52,10 @@ namespace CertificateManagement.Business.Services
                 Role = user.Role
             };
         }
-        
+
+
+
+
         public async Task<bool> RegisterAsync(UserDto userDto)
         {
             // Email kontrolü
@@ -83,60 +95,60 @@ namespace CertificateManagement.Business.Services
             
             return true;
         }
-        
+
         private string GenerateJwtToken(User user)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]);
+            // Base64 formatında güvenli bir anahtar oluşturun
+            var keyBytes = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]);
+            var securityKey = new SymmetricSecurityKey(keyBytes);
+
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(new[]
                 {
-                    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                    new Claim(ClaimTypes.Email, user.Email),
-                    new Claim(ClaimTypes.Name, user.Username),
-                    new Claim(ClaimTypes.Role, user.Role)
-                }),
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new Claim(ClaimTypes.Email, user.Email),
+            new Claim(ClaimTypes.Name, user.Username),
+            new Claim(ClaimTypes.Role, user.Role)
+        }),
                 Expires = DateTime.UtcNow.AddMinutes(double.Parse(_configuration["Jwt:ExpiryMinutes"])),
-                SigningCredentials = new SigningCredentials(
-                    new SymmetricSecurityKey(key), 
-                    SecurityAlgorithms.HmacSha256Signature),
+                SigningCredentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256Signature),
                 Issuer = _configuration["Jwt:Issuer"],
                 Audience = _configuration["Jwt:Audience"]
             };
-            
+
             var token = tokenHandler.CreateToken(tokenDescriptor);
             return tokenHandler.WriteToken(token);
         }
-        
         private string CreatePasswordHash(string password)
         {
             using (var hmac = new HMACSHA512())
             {
-                var salt = hmac.Key;
+                var salt = hmac.Key; // HMACSHA512 key size: 64 bytes
                 var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
-                
+
                 // Salt ve hash'i birleştir
                 var hashBytes = new byte[salt.Length + hash.Length];
                 Array.Copy(salt, 0, hashBytes, 0, salt.Length);
                 Array.Copy(hash, 0, hashBytes, salt.Length, hash.Length);
-                
+
                 return Convert.ToBase64String(hashBytes);
             }
         }
-        
+
         private bool VerifyPasswordHash(string password, string storedHash)
         {
             var hashBytes = Convert.FromBase64String(storedHash);
-            
-            // Salt 128 byte (HMACSHA512 key length)
+
+            // Salt 64 byte (HMACSHA512 key length)
             var salt = new byte[64];
             Array.Copy(hashBytes, 0, salt, 0, salt.Length);
-            
+
             using (var hmac = new HMACSHA512(salt))
             {
                 var computedHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
-                
+
                 // Hash'leri karşılaştır
                 for (int i = 0; i < computedHash.Length; i++)
                 {
@@ -144,8 +156,10 @@ namespace CertificateManagement.Business.Services
                         return false;
                 }
             }
-            
+
             return true;
         }
+
+
     }
 }

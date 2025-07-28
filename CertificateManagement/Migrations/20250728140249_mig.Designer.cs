@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CertificateManagement.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250728113200_mig")]
+    [Migration("20250728140249_mig")]
     partial class mig
     {
         /// <inheritdoc />

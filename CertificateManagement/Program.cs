@@ -40,22 +40,42 @@ builder.Services.AddCors(options =>
 builder.Services.AddControllers().AddNewtonsoftJson(options =>
     options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore);
 
-// JWT Authentication
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer = true,
-            ValidateAudience = true,
+            ValidateIssuer = false, // Test için false yapın
+            ValidateAudience = false, // Test için false yapın
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
         };
+
+        // Debug için
+        options.Events = new JwtBearerEvents
+        {
+            OnAuthenticationFailed = context =>
+            {
+                Console.WriteLine("Kimlik doğrulama hatası: " + context.Exception.Message);
+                return Task.CompletedTask;
+            },
+            OnTokenValidated = context =>
+            {
+                Console.WriteLine("Token başarıyla doğrulandı");
+                return Task.CompletedTask;
+            },
+            OnMessageReceived = context =>
+            {
+                Console.WriteLine("Token alındı: " + (context.Token?.Substring(0, 10) ?? "null"));
+                return Task.CompletedTask;
+            }
+        };
     });
+
+
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
