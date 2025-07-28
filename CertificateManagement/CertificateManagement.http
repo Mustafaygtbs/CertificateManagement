@@ -1,0 +1,6 @@
+@CertificateManagement_HostAddress = http://localhost:5287
+
+GET {{CertificateManagement_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
